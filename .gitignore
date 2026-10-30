@@ -1,0 +1,22 @@
+# 编译产物
+*.exe
+*.exe.sha256
+
+# Go
+vendor/
+*.test
+.cache/
+
+# Python
+__pycache__/
+*.pyc
+
+# 设计稿中间产物
+design/out/*.png
+!design/out/preview.png
+!design/out/osd_mockup.png
+
+# IDE
+.idea/
+.vscode/
+*.swp

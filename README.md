@@ -5,7 +5,7 @@
 一个 exe，不装驱动、不用界面，直接读写 EC（嵌入式控制器）里的性能模式字段，
 在 **性能 / 均衡 / 静音** 三档之间切换，并提供一个替代原厂 OSD 的后台提示程序。
 
-![图标与界面预览](design/out/preview.png)
+![三种模式的 OSD 提示](docs/osd-modes.png)
 
 ## 特性
 
@@ -84,12 +84,8 @@ perfmode osd
 ```
 
 启动后没有窗口，只在托盘留一个图标（Windows 11 默认收进溢出区，拖出来一次即可固定）。
-之后无论是命令行切换还是按 `Fn+F1`，屏幕上方都会弹出提示：
-
-```
-   ◜◝        性能模式
-  ◟ ◞      TURBO · 功耗墙 65W
-```
+之后无论是命令行切换还是按 `Fn+F1`，屏幕上方都会弹出提示（见顶部配图）：
+左侧是按模式变化的仪表图标，右侧是模式名、功耗墙，以及可选的温度与转速。
 
 托盘右键菜单：性能/均衡/静音、背光 关/暗/亮、弹窗附带温度转速、显示当前模式、开机自启、退出。
 悬停提示实时显示 `perfmode — 均衡模式 · 66°C · 3080 rpm`。
@@ -195,6 +191,14 @@ A: 只写 `0xE4` / `0xE2` 这两个字节，都是固件自己也会写的目标
 - 同模具 WMI/EC 分析：<https://github.com/MintyMods/ip3-power-switch>
 - InpOut32 驱动：<http://www.highrez.co.uk/downloads/inpout32/>
 - 图标规范：<https://learn.microsoft.com/en-us/windows/apps/design/style/iconography/app-icon-design>
+
+## 图标
+
+图标按 Windows 11 应用图标规范设计：满铺圆角色块 + 白色字形，环的填充比例表示档位
+（静音 18% / 均衡 55% / 性能 100%），托盘图标为单色并跟随系统深浅色主题。
+
+设计稿见 [design/out/preview.png](design/out/preview.png)，由 `design/gen_icons.py` 生成；
+运行期资源由 `design/build_assets.py` 写入 `osd/assets/`。
 
 ## 许可证
 

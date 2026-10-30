@@ -44,6 +44,8 @@ var (
 	procGetClientRect      = user32.NewProc("GetClientRect")
 	procSetLayeredAttrs    = user32.NewProc("SetLayeredWindowAttributes")
 	procSetDpiAwareCtx     = user32.NewProc("SetProcessDpiAwarenessContext")
+	procSetWindowRgn       = user32.NewProc("SetWindowRgn")
+	procCreateRoundRectRgn = gdi32.NewProc("CreateRoundRectRgn")
 	procGetDpiForSystem    = user32.NewProc("GetDpiForSystem")
 
 	procSetTextColor     = gdi32.NewProc("SetTextColor")
@@ -219,7 +221,7 @@ func Run(updates <-chan Item, durationMs int, initialMode string) {
 	Logf("DPI %.2f 窗口 %dx%d 屏幕 %dx%d", scale, winW, winH, sw, sh)
 
 	hwnd, _, err := procCreateWindowEx.Call(
-		wsExTopmost|wsExLayered|wsExToolWindow|wsExNoActivate,
+		wsExTopmost|wsExToolWindow|wsExNoActivate,
 		uintptr(unsafe.Pointer(classNamePtr)), 0, wsPopup,
 		uintptr(x), uintptr(y), uintptr(winW), uintptr(winH),
 		0, 0, hInst, 0,
@@ -229,8 +231,8 @@ func Run(updates <-chan Item, durationMs int, initialMode string) {
 	}
 	hwndMain = hwnd
 
-	// WS_EX_LAYERED 窗口默认 alpha 为 0，必须显式设置
-	procSetLayeredAttrs.Call(hwnd, 0, 244, 0x00000002)
+	// 用窗口区域做圆角（不再依赖分层窗口，这样 GDI 文字能用 ClearType）
+	applyRoundRegion(hwnd, winW, winH, int(11*scale))
 
 	fontBig, _, _ = procCreateFont.Call(uintptr(float64(28)*scale), 0, 0, 0, 700, 0, 0, 0, 0x86, 0, 0, 5, 0, uintptr(unsafe.Pointer(fontName)))
 	fontMid, _, _ = procCreateFont.Call(uintptr(float64(15)*scale), 0, 0, 0, 400, 0, 0, 0, 0x86, 0, 0, 5, 0, uintptr(unsafe.Pointer(fontName)))
@@ -274,6 +276,15 @@ func SetTip(text string) {
 	nid.Flags = nifTip
 	copy(nid.SzTip[:], syscall.StringToUTF16(text))
 	procShellNotifyIcon.Call(nimModify, uintptr(unsafe.Pointer(&nid)))
+}
+
+// applyRoundRegion 把窗口裁成圆角矩形
+func applyRoundRegion(hwnd uintptr, w, h, radius int) {
+	rgn, _, _ := procCreateRoundRectRgn.Call(0, 0, uintptr(w+1), uintptr(h+1),
+		uintptr(radius*2), uintptr(radius*2))
+	if rgn != 0 {
+		procSetWindowRgn.Call(hwnd, rgn, 1)
+	}
 }
 
 func clientRect(hwnd uintptr) rect {
@@ -355,6 +366,7 @@ func wndProc(hwnd uintptr, msgID uint32, wParam, lParam uintptr) uintptr {
 			const swpNoActivate = 0x0010
 			procSetWindowPos.Call(hwnd, hwndTopmost,
 				uintptr(x), uintptr(y), uintptr(w), uintptr(wantH), swpNoActivate)
+			applyRoundRegion(hwnd, w, wantH, int(11*osdScale))
 		}
 		procShowWindow.Call(hwnd, swShowNoActivate)
 		// 窗口已经可见时单纯 ShowWindow 不会重绘，必须显式作废客户区

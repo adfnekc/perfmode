@@ -16,6 +16,8 @@ var (
 	procCreateDIBSec  = gdi32.NewProc("CreateDIBSection")
 	procDeleteDC      = gdi32.NewProc("DeleteDC")
 	procDeleteObject  = gdi32.NewProc("DeleteObject")
+	procSetStretchBltMode = gdi32.NewProc("SetStretchBltMode")
+	procSetBrushOrgEx     = gdi32.NewProc("SetBrushOrgEx")
 )
 
 type bitmapInfoHeader struct {
@@ -43,6 +45,8 @@ type blendFunction struct {
 	SourceConstantAlpha byte
 	AlphaFormat         byte
 }
+
+const halftone = 4 // HALFTONE
 
 type dibImage struct {
 	dc     uintptr
@@ -110,6 +114,10 @@ func drawGlyph(hdc uintptr, mode string, x, y, size int) {
 	if d == nil {
 		return
 	}
+	// 让缩放走双线性而不是最近邻，否则缩小时会有锯齿
+	procSetStretchBltMode.Call(hdc, halftone)
+	procSetBrushOrgEx.Call(hdc, 0, 0, 0)
+
 	bf := blendFunction{BlendOp: 0, BlendFlags: 0, SourceConstantAlpha: 255, AlphaFormat: 1} // AC_SRC_ALPHA
 	procAlphaBlend.Call(hdc,
 		uintptr(x), uintptr(y), uintptr(size), uintptr(size),
